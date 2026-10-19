@@ -2,6 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 PROTOTIPO DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)
+Etapa 5: Integración de Persistencia de Datos en Archivos CSV (UTF-8) y Bitácora.
+"""
+
+import csv
+import os
+from datetime import datetime
+PROTOTIPO DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)
 Etapa 1: Estructura inicial y declaración de arreglos paralelos.
 """
 
@@ -128,3 +135,37 @@ def generar_codigo_expediente(lista_codigos, anio=2026):
             if corr > max_correlativo:
                 max_correlativo = corr
     return f"EXP-{anio}-{max_correlativo + 1:04d}"
+
+
+# ==============================================================================
+# MÓDULO 3: PERSISTENCIA DE DATOS EN ARCHIVOS CSV (UTF-8)
+# ==============================================================================
+def guardar_en_archivo(ruta_archivo=ARCHIVO_DATOS):
+    try:
+        with open(ruta_archivo, mode="w", newline="", encoding="utf-8") as archivo:
+            escritor = csv.writer(archivo, delimiter=";")
+            escritor.writerow(["CODIGO", "DNI_RUC", "CIUDADANO", "ASUNTO", "AREA_DESTINO", "FOLIOS", "FECHA_HORA", "ESTADO"])
+            for i in range(len(codigos)):
+                escritor.writerow([codigos[i], dnis[i], ciudadanos[i], asuntos[i], areas[i], folios[i], fechas[i], estados[i]])
+        return True
+    except OSError as error:
+        print(f"[ERROR] Fallo al guardar el archivo: {error}")
+        return False
+
+
+def cargar_desde_archivo(ruta_archivo=ARCHIVO_DATOS):
+    if not os.path.exists(ruta_archivo):
+        return 0
+    codigos.clear(); dnis.clear(); ciudadanos.clear(); asuntos.clear()
+    areas.clear(); folios.clear(); fechas.clear(); estados.clear()
+    contador = 0
+    with open(ruta_archivo, mode="r", encoding="utf-8") as archivo:
+        lector = csv.reader(archivo, delimiter=";")
+        next(lector, None)
+        for fila in lector:
+            if len(fila) == 8:
+                codigos.append(fila[0]); dnis.append(fila[1]); ciudadanos.append(fila[2])
+                asuntos.append(fila[3]); areas.append(fila[4]); folios.append(int(fila[5]))
+                fechas.append(fila[6]); estados.append(fila[7])
+                contador += 1
+    return contador
