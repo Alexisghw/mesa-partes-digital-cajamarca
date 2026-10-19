@@ -93,3 +93,38 @@ def buscar_por_codigo_binaria(codigo_buscado):
         else:
             derecha = medio - 1
     return -1
+
+
+# ==============================================================================
+# MÓDULO DE CADENAS DE CARACTERES Y GENERADOR DE CORRELATIVO EXP-2026-XXXX
+# ==============================================================================
+def normalizar_texto(texto):
+    palabras = texto.strip().upper().split()
+    return " ".join(palabras)
+
+
+def validar_nombre_ciudadano(nombre):
+    nombre_norm = normalizar_texto(nombre)
+    if len(nombre_norm) < 5:
+        return False, "Error: El nombre del ciudadano debe tener al menos 5 caracteres."
+    return True, nombre_norm
+
+
+def validar_asunto(asunto):
+    asunto_norm = normalizar_texto(asunto).replace(";", ",")
+    if len(asunto_norm) < 8:
+        return False, "Error: El asunto debe detallar el trámite (mínimo 8 caracteres)."
+    return True, asunto_norm
+
+
+def generar_codigo_expediente(lista_codigos, anio=2026):
+    if len(lista_codigos) == 0:
+        return f"EXP-{anio}-0001"
+    max_correlativo = 0
+    for cod in lista_codigos:
+        partes = cod.split("-")
+        if len(partes) == 3 and partes[2].isdigit():
+            corr = int(partes[2])
+            if corr > max_correlativo:
+                max_correlativo = corr
+    return f"EXP-{anio}-{max_correlativo + 1:04d}"
