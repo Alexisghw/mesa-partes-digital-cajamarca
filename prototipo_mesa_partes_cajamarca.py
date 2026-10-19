@@ -50,3 +50,46 @@ def validar_folios(valor_texto):
     if 1 <= num <= 500:
         return True, num
     return False, 0
+
+
+# ==============================================================================
+# MÓDULO 4 (PRELIMINAR): ORDENAMIENTO BURBUJA Y BÚSQUEDA BINARIA EN ARREGLOS
+# ==============================================================================
+def intercambiar_indices(i, j):
+    codigos[i], codigos[j] = codigos[j], codigos[i]
+    dnis[i], dnis[j] = dnis[j], dnis[i]
+    ciudadanos[i], ciudadanos[j] = ciudadanos[j], ciudadanos[i]
+    asuntos[i], asuntos[j] = asuntos[j], asuntos[i]
+    areas[i], areas[j] = areas[j], areas[i]
+    folios[i], folios[j] = folios[j], folios[i]
+    fechas[i], fechas[j] = fechas[j], fechas[i]
+    estados[i], estados[j] = estados[j], estados[i]
+
+
+def ordenar_expedientes_por_codigo(ascendente=True):
+    n = len(codigos)
+    for i in range(n - 1):
+        hubo_intercambio = False
+        for j in range(0, n - i - 1):
+            condicion = (codigos[j] > codigos[j + 1]) if ascendente else (codigos[j] < codigos[j + 1])
+            if condicion:
+                intercambiar_indices(j, j + 1)
+                hubo_intercambio = True
+        if not hubo_intercambio:
+            break
+
+
+def buscar_por_codigo_binaria(codigo_buscado):
+    ordenar_expedientes_por_codigo(ascendente=True)
+    objetivo = codigo_buscado.strip().upper()
+    izquierda = 0
+    derecha = len(codigos) - 1
+    while izquierda <= derecha:
+        medio = (izquierda + derecha) // 2
+        if codigos[medio] == objetivo:
+            return medio
+        elif codigos[medio] < objetivo:
+            izquierda = medio + 1
+        else:
+            derecha = medio - 1
+    return -1
