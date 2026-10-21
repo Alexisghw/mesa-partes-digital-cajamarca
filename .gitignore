@@ -1,0 +1,9 @@
+# Archivos que genera Python al ejecutar
+__pycache__/
+*.pyc
+
+# Resultado de la simulación de pruebas (se genera con: python main.py --auto)
+expedientes_prueba.csv
+
+# Configuración local del editor
+.vscode/
