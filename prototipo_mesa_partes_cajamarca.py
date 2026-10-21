@@ -1,25 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-PROTOTIPO DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)
-Curso: Fundamentos de Programación (CIIN1205P) - Universidad Privada del Norte (UPN) - Sede Cajamarca
-Título del Desafío: Del archivador al algoritmo, un prototipo para la mesa de partes digital
-Normativa vinculada: Ley N.° 31170 y Decreto Legislativo N.° 1412 (Ley de Gobierno Digital)
-
-Descripción técnica:
-Este sistema implementa el registro, validación, búsqueda (secuencial y binaria),
-ordenamiento (Burbuja sobre arreglos paralelos) y persistencia en archivos (CSV UTF-8)
-de expedientes administrativos ciudadanos utilizando programación modular.
-"""
 
 import csv
 import os
 from datetime import datetime
 from typing import List, Tuple
 
-# ==============================================================================
-# MÓDULO 1: CONFIGURACIÓN Y ARREGLOS PARALELOS (ESTRUCTURAS LINEALES DE DATOS)
-# ==============================================================================
 ARCHIVO_DATOS = "expedientes_cajamarca.csv"
 ARCHIVO_AUDITORIA = "auditoria_mesa_partes.log"
 
@@ -34,31 +20,22 @@ AREAS_MUNICIPALES = [
 
 ESTADOS_VALIDOS = ["REGISTRADO", "EN EVALUACIÓN", "OBSERVADO", "ATENDIDO"]
 
-# Arreglos paralelos (listas unidimensionales sincronizadas por índice i)
-codigos: List[str] = []       # Ej: "EXP-2026-0001"
-dnis: List[str] = []          # Ej: "71458923"
-ciudadanos: List[str] = []    # Ej: "CHILON CHUQUIMANGO, JORGE LUIS"
-asuntos: List[str] = []       # Ej: "SOLICITUD DE LICENCIA DE EDIFICACION"
-areas: List[str] = []         # Ej: "Subgerencia de Desarrollo Urbano y Rural"
-folios: List[int] = []        # Ej: 12
-fechas: List[str] = []        # Ej: "2026-10-15 09:14:22"
-estados: List[str] = []       # Ej: "REGISTRADO"
+codigos: List[str] = []
+dnis: List[str] = []
+ciudadanos: List[str] = []
+asuntos: List[str] = []
+areas: List[str] = []
+folios: List[int] = []
+fechas: List[str] = []
+estados: List[str] = []
 
 
-# ==============================================================================
-# MÓDULO 2: FUNCIONES DE VALIDACIÓN Y MANIPULACIÓN DE CADENAS DE CARACTERES
-# ==============================================================================
 def normalizar_texto(texto: str) -> str:
-    """Limpia espacios extremos, dobles espacios y convierte a mayúsculas."""
     palabras = texto.strip().upper().split()
     return " ".join(palabras)
 
 
 def validar_dni_o_ruc(documento: str) -> Tuple[bool, str]:
-    """
-    Valida mediante lógica proposicional que el documento sea un DNI (8 dígitos)
-    o un RUC (11 dígitos que inicia en 10 o 20) compuesto exclusivamente por números.
-    """
     doc_limpio = documento.strip()
     if not doc_limpio.isdigit():
         return False, "Error: El documento debe contener únicamente dígitos numéricos (0-9)."
@@ -70,11 +47,9 @@ def validar_dni_o_ruc(documento: str) -> Tuple[bool, str]:
 
 
 def validar_nombre_ciudadano(nombre: str) -> Tuple[bool, str]:
-    """Valida que el nombre o razón social tenga longitud mínima y formato válido."""
     nombre_norm = normalizar_texto(nombre)
     if len(nombre_norm) < 5:
         return False, "Error: El nombre del ciudadano debe tener al menos 5 caracteres."
-    # Verificar que no sea solo números
     sin_espacios = nombre_norm.replace(" ", "").replace(",", "").replace(".", "")
     if sin_espacios.isdigit():
         return False, "Error: El nombre del ciudadano no puede estar compuesto solo por números."
@@ -82,7 +57,6 @@ def validar_nombre_ciudadano(nombre: str) -> Tuple[bool, str]:
 
 
 def validar_asunto(asunto: str) -> Tuple[bool, str]:
-    """Valida que el asunto del trámite sea descriptivo y no contenga el separador CSV."""
     asunto_norm = normalizar_texto(asunto).replace(";", ",")
     if len(asunto_norm) < 8:
         return False, "Error: El asunto debe detallar el trámite (mínimo 8 caracteres)."
@@ -90,7 +64,6 @@ def validar_asunto(asunto: str) -> Tuple[bool, str]:
 
 
 def validar_folios(valor_texto: str) -> Tuple[bool, int]:
-    """Valida que el número de folios sea un entero positivo entre 1 y 500."""
     limpio = valor_texto.strip()
     if not limpio.isdigit():
         return False, 0
@@ -101,10 +74,6 @@ def validar_folios(valor_texto: str) -> Tuple[bool, int]:
 
 
 def generar_codigo_expediente(lista_codigos: List[str], anio: int = 2026) -> str:
-    """
-    Genera automáticamente un código único con formato EXP-2026-XXXX
-    extrayendo el correlativo máximo mediante descomposición de cadenas (.split('-')).
-    """
     if len(lista_codigos) == 0:
         return f"EXP-{anio}-0001"
     max_correlativo = 0
@@ -118,11 +87,7 @@ def generar_codigo_expediente(lista_codigos: List[str], anio: int = 2026) -> str
     return f"EXP-{anio}-{nuevo_corr:04d}"
 
 
-# ==============================================================================
-# MÓDULO 3: PERSISTENCIA DE DATOS EN ARCHIVOS (CSV Y BITÁCORA DE AUDITORÍA)
-# ==============================================================================
 def registrar_auditoria(accion: str, detalle: str) -> None:
-    """Registra eventos del sistema en un archivo de texto plano para trazabilidad."""
     marca_tiempo = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     linea = f"[{marca_tiempo}] [{accion}] {detalle}\n"
     try:
@@ -133,10 +98,6 @@ def registrar_auditoria(accion: str, detalle: str) -> None:
 
 
 def guardar_en_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> bool:
-    """
-    Almacena de forma permanente todos los arreglos paralelos en un archivo CSV
-    codificado en UTF-8 con delimitador punto y coma (;).
-    """
     try:
         with open(ruta_archivo, mode="w", newline="", encoding="utf-8") as archivo:
             escritor = csv.writer(archivo, delimiter=";")
@@ -157,10 +118,6 @@ def guardar_en_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> bool:
 
 
 def cargar_desde_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> int:
-    """
-    Lee el archivo CSV al iniciar el programa y reconstruye los arreglos paralelos.
-    Retorna la cantidad de registros cargados.
-    """
     if not os.path.exists(ruta_archivo):
         return 0
 
@@ -177,7 +134,7 @@ def cargar_desde_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> int:
     try:
         with open(ruta_archivo, mode="r", encoding="utf-8") as archivo:
             lector = csv.reader(archivo, delimiter=";")
-            encabezado = next(lector, None)  # Omitir cabecera
+            next(lector, None)
             for fila in lector:
                 if len(fila) == 8:
                     codigos.append(fila[0])
@@ -185,7 +142,8 @@ def cargar_desde_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> int:
                     ciudadanos.append(fila[2])
                     asuntos.append(fila[3])
                     areas.append(fila[4])
-                    folios.append(int(fila[5]) if fila[5].isdigit() else 1)
+                    # Corrección: Uso de .strip() antes de .isdigit() para evitar errores por espacios
+                    folios.append(int(fila[5].strip()) if fila[5].strip().isdigit() else 1)
                     fechas.append(fila[6])
                     estados.append(fila[7])
                     contador += 1
@@ -195,32 +153,15 @@ def cargar_desde_archivo(ruta_archivo: str = ARCHIVO_DATOS) -> int:
     return contador
 
 
-# ==============================================================================
-# MÓDULO 4: OPERACIONES ALGORÍTMICAS (INSERCIÓN, ORDENAMIENTO Y BÚSQUEDA)
-# ==============================================================================
-def insertar_expediente(
-    dni_doc: str,
-    nombre_ciud: str,
-    asunto_tramite: str,
-    indice_area: int,
-    num_folios: int,
-    fecha_manual: str = ""
-) -> Tuple[bool, str]:
-    """
-    Valida las entradas, genera el código único, inserta en los arreglos paralelos
-    y sincroniza inmediatamente con el archivo CSV.
-    """
+def insertar_expediente(dni_doc: str, nombre_ciud: str, asunto_tramite: str, indice_area: int, num_folios: int, fecha_manual: str = "") -> Tuple[bool, str]:
     ok_dni, res_dni = validar_dni_o_ruc(dni_doc)
-    if not ok_dni:
-        return False, res_dni
+    if not ok_dni: return False, res_dni
 
     ok_nom, res_nom = validar_nombre_ciudadano(nombre_ciud)
-    if not ok_nom:
-        return False, res_nom
+    if not ok_nom: return False, res_nom
 
     ok_asu, res_asu = validar_asunto(asunto_tramite)
-    if not ok_asu:
-        return False, res_asu
+    if not ok_asu: return False, res_asu
 
     if not (0 <= indice_area < len(AREAS_MUNICIPALES)):
         return False, "Error: El índice de área municipal seleccionada no es válido."
@@ -231,7 +172,6 @@ def insertar_expediente(
     nuevo_codigo = generar_codigo_expediente(codigos)
     marca_fecha = fecha_manual if fecha_manual else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Inserción sincronizada en arreglos paralelos
     codigos.append(nuevo_codigo)
     dnis.append(res_dni)
     ciudadanos.append(res_nom)
@@ -247,7 +187,6 @@ def insertar_expediente(
 
 
 def intercambiar_indices(i: int, j: int) -> None:
-    """Intercambia los elementos de las posiciones i y j en todos los arreglos paralelos."""
     codigos[i], codigos[j] = codigos[j], codigos[i]
     dnis[i], dnis[j] = dnis[j], dnis[i]
     ciudadanos[i], ciudadanos[j] = ciudadanos[j], ciudadanos[i]
@@ -259,11 +198,6 @@ def intercambiar_indices(i: int, j: int) -> None:
 
 
 def ordenar_expedientes_por_codigo(ascendente: bool = True) -> None:
-    """
-    Algoritmo de Ordenamiento Burbuja Mejorado (con bandera de corte temprano)
-    aplicado sobre el arreglo de códigos y sincronizado con los arreglos paralelos.
-    Complejidad: O(n^2) en el peor caso, O(n) si ya se encuentra ordenado.
-    """
     n = len(codigos)
     for i in range(n - 1):
         hubo_intercambio = False
@@ -277,21 +211,7 @@ def ordenar_expedientes_por_codigo(ascendente: bool = True) -> None:
     guardar_en_archivo()
 
 
-def ordenar_expedientes_por_ciudadano() -> None:
-    """Ordena alfabéticamente los expedientes por apellido/nombre del ciudadano."""
-    n = len(ciudadanos)
-    for i in range(n - 1):
-        for j in range(0, n - i - 1):
-            if ciudadanos[j] > ciudadanos[j + 1]:
-                intercambiar_indices(j, j + 1)
-
-
 def buscar_por_codigo_binaria(codigo_buscado: str) -> int:
-    """
-    Implementa el algoritmo de Búsqueda Binaria O(log2 n) sobre el arreglo de códigos.
-    Precondición: Se asegura que los arreglos estén ordenados ascendentemente por código.
-    Retorna el índice del expediente o -1 si no existe.
-    """
     ordenar_expedientes_por_codigo(ascendente=True)
     objetivo = normalizar_texto(codigo_buscado)
     izquierda = 0
@@ -309,10 +229,6 @@ def buscar_por_codigo_binaria(codigo_buscado: str) -> int:
 
 
 def buscar_por_dni_secuencial(dni_buscado: str) -> List[int]:
-    """
-    Implementa Búsqueda Lineal/Secuencial O(n) para hallar todos los expedientes
-    asociados a un mismo DNI o RUC ciudadano.
-    """
     objetivo = dni_buscado.strip()
     indices_encontrados: List[int] = []
     for i in range(len(dnis)):
@@ -322,7 +238,6 @@ def buscar_por_dni_secuencial(dni_buscado: str) -> List[int]:
 
 
 def mostrar_tabla_expedientes(indices: List[int] = None) -> str:
-    """Genera una representación tabular formateada de los expedientes."""
     if len(codigos) == 0:
         return "No existen expedientes registrados en el sistema."
 
@@ -332,87 +247,34 @@ def mostrar_tabla_expedientes(indices: List[int] = None) -> str:
     lineas = []
     separador = "-" * 116
     lineas.append(separador)
-    lineas.append(
-        f"{'CÓDIGO':<14} | {'DNI/RUC':<11} | {'CIUDADANO / ADMINISTRADO':<28} | "
-        f"{'ASUNTO DEL TRÁMITE':<30} | {'FOLIOS':<6} | {'ESTADO':<13}"
-    )
+    lineas.append(f"{'CÓDIGO':<14} | {'DNI/RUC':<11} | {'CIUDADANO / ADMINISTRADO':<28} | {'ASUNTO DEL TRÁMITE':<30} | {'FOLIOS':<6} | {'ESTADO':<13}")
     lineas.append(separador)
     for idx in indices:
         ciud_corto = ciudadanos[idx][:27]
         asunto_corto = asuntos[idx][:29]
-        lineas.append(
-            f"{codigos[idx]:<14} | {dnis[idx]:<11} | {ciud_corto:<28} | "
-            f"{asunto_corto:<30} | {folios[idx]:>6} | {estados[idx]:<13}"
-        )
+        lineas.append(f"{codigos[idx]:<14} | {dnis[idx]:<11} | {ciud_corto:<28} | {asunto_corto:<30} | {folios[idx]:>6} | {estados[idx]:<13}")
     lineas.append(separador)
     lineas.append(f"Total de registros listados: {len(indices)}")
     return "\n".join(lineas)
 
-
 # ==============================================================================
-# MÓDULO 5: EJECUCIÓN DE CASOS DE PRUEBA CON DATOS DE CAMPO (CAJAMARCA)
+# NUEVO MÓDULO: MENÚ INTERACTIVO (CLI)
 # ==============================================================================
-def ejecutar_simulacion_cajamarca() -> None:
-    """
-    Carga los datos recogidos en la práctica de campo en la Municipalidad Distrital
-    de Los Baños del Inca (Cajamarca) y ejecuta las pruebas de validación,
-    ordenamiento, búsqueda y persistencia.
-    """
-    if os.path.exists(ARCHIVO_DATOS):
-        os.remove(ARCHIVO_DATOS)
+def mostrar_menu():
+    print("\n" + "=" * 60)
+    print("   SISTEMA DE MESA DE PARTES DIGITAL - BAÑOS DEL INCA")
+    print("=" * 60)
+    print("[1] Registrar nuevo expediente")
+    print("[2] Mostrar todos los expedientes")
+    print("[3] Buscar expediente por código (Búsqueda Binaria)")
+    print("[4] Buscar expedientes por DNI/RUC (Búsqueda Secuencial)")
+    print("[5] Salir del sistema")
+    print("=" * 60)
 
-    print("=" * 116)
-    print("   SISTEMA DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)")
-    print("   Cumplimiento de la Ley N.° 31170 y Decreto Legislativo N.° 1412 - Prototipo v1.0")
-    print("=" * 116)
+def ejecutar_sistema():
+    total_cargados = cargar_desde_archivo()
+    print(f"Sistema iniciado. {total_cargados} expedientes recuperados del almacenamiento local.")
 
-    # 1. Casos de prueba con datos válidos recogidos en campo (Cajamarca)
-    datos_campo = [
-        ("71458923", "Chilón Chuquimango, Jorge Luis", "Solicitud de Licencia de Edificación en C.P. Otuzco", 0, 18, "2026-10-14 08:35:10"),
-        ("42891034", "Vásquez Rabanal, María Elena", "Reclamo por Arbitrios Municipales 2026 - Jr. Manco Cápac", 1, 6, "2026-10-14 09:12:45"),
-        ("20453891201", "Lácteos Huacariz Cajamarca S.A.C.", "Renovación de Licencia de Funcionamiento Industrial", 2, 24, "2026-10-14 10:05:19"),
-        ("26704512", "portal Minchán, Segundo Teófilo", "Copia Certificada de Acta de Matrimonio Civil 1998", 3, 2, "2026-10-15 11:20:00"),
-        ("73901248", "Cabrera Bazán, Rocío del Pilar", "Inspección Técnica de Saneamiento en Tartar Grande", 4, 9, "2026-10-15 14:40:33"),
-        ("40129876", "Tirado Gallardo, Carlos Alberto", "Constancia de Posesión para Electrificación Rural Shaullo", 0, 15, "2026-10-16 08:50:12"),
-    ]
-
-    print("\n[FASE 1] REGISTRO DE EXPEDIENTES RECOGIDOS EN PRÁCTICA DE CAMPO (CAJAMARCA):")
-    for dni, nom, asu, area_idx, fol, fec in datos_campo:
-        exito, msg = insertar_expediente(dni, nom, asu, area_idx, fol, fec)
-        print(f"  -> Registro {'[EXITOSO]' if exito else '[FALLIDO]'}: Código asignado = {msg} | Administrado: {normalizar_texto(nom)}")
-
-    # 2. Casos de prueba de validación (Entradas erróneas / Casos de borde)
-    print("\n[FASE 2] PRUEBAS DE VALIDACIÓN DE REGLAS DE NEGOCIO (DETECCIÓN DE ERRORES):")
-    casos_error = [
-        ("7145AB23", "Terán Silva, Pedro", "Solicitud de poda de árboles en parque", 4, 3),
-        ("12345", "Salazar Rojas, Ana", "Certificado de parámetros urbanísticos", 0, 5),
-        ("74892011", "Lu", "Solicitud de exoneración predial adulto mayor", 1, 4),
-        ("74892011", "Mendoza Quispe, Rosa", "Trámite", 2, 4),
-        ("74892011", "Mendoza Quispe, Rosa", "Solicitud de alineamiento vial en Av. Atahualpa", 0, 0),
-    ]
-    for dni_e, nom_e, asu_e, area_e, fol_e in casos_error:
-        exito, msg = insertar_expediente(dni_e, nom_e, asu_e, area_e, fol_e)
-        print(f"  -> Prueba con entrada inválida (DNI='{dni_e}', Nom='{nom_e}', Folios={fol_e}): {msg}")
-
-    # 3. Listado general y Ordenamiento
-    print("\n[FASE 3] ORDENAMIENTO ALFABÉTICO POR CIUDADANO Y LISTADO GENERAL:")
-    ordenar_expedientes_por_ciudadano()
-    print(mostrar_tabla_expedientes())
-
-    # 4. Búsqueda Binaria por Código de Expediente
-    print("\n[FASE 4] BÚSQUEDA BINARIA O(log2 n) POR CÓDIGO DE EXPEDIENTE:")
-    for cod_consulta in ["EXP-2026-0004", "EXP-2026-0099"]:
-        pos = buscar_por_codigo_binaria(cod_consulta)
-        if pos != -1:
-            print(f"  [ENCONTRADO] {codigos[pos]} | Ciudadano: {ciudadanos[pos]} | Área: {areas[pos]} | Fecha: {fechas[pos]}")
-        else:
-            print(f"  [NO ENCONTRADO] El código '{cod_consulta}' no existe en el padrón de expedientes.")
-
-    # 5. Verificación de Persistencia en Archivo CSV
-    print("\n[FASE 5] VERIFICACIÓN DE PERSISTENCIA EN ARCHIVO ('expedientes_cajamarca.csv'):")
-    total_reconstruidos = cargar_desde_archivo()
-    print(f"  -> Archivo CSV leído correctamente. Registros recuperados del disco: {total_reconstruidos}")
-
-
-if __name__ == "__main__":
-    ejecutar_simulacion_cajamarca()
+    while True:
+        mostrar_menu()
+opcion = input("Seleccione una opción (1-5): ").strip()
