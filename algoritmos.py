@@ -74,11 +74,12 @@ def intercambiar_indices(i: int, j: int) -> None:
     estados[i], estados[j] = estados[j], estados[i]
 
 
-def ordenar_expedientes_por_codigo(ascendente: bool = True) -> None:
+def ordenar_expedientes_por_codigo(ascendente: bool = True, guardar: bool = True) -> None:
     """
     Algoritmo de Ordenamiento Burbuja Mejorado (con bandera de corte temprano)
     aplicado sobre el arreglo de códigos y sincronizado con los arreglos paralelos.
     Complejidad: O(n^2) en el peor caso, O(n) si ya se encuentra ordenado.
+    El parámetro 'guardar' permite ordenar solo en memoria (lo usa la búsqueda binaria).
     """
     n = len(codigos)
     for i in range(n - 1):
@@ -90,25 +91,36 @@ def ordenar_expedientes_por_codigo(ascendente: bool = True) -> None:
                 hubo_intercambio = True
         if not hubo_intercambio:
             break
-    guardar_en_archivo()
+    if guardar:
+        guardar_en_archivo()
 
 
 def ordenar_expedientes_por_ciudadano() -> None:
-    """Ordena alfabéticamente los expedientes por apellido/nombre del ciudadano."""
+    """
+    Ordena alfabéticamente (A-Z) los expedientes por apellido/nombre del ciudadano
+    con el mismo Burbuja Mejorado (bandera de corte temprano) y guarda el nuevo orden.
+    """
     n = len(ciudadanos)
     for i in range(n - 1):
+        hubo_intercambio = False
         for j in range(0, n - i - 1):
             if ciudadanos[j] > ciudadanos[j + 1]:
                 intercambiar_indices(j, j + 1)
+                hubo_intercambio = True
+        if not hubo_intercambio:
+            break
+    guardar_en_archivo()
 
 
 def buscar_por_codigo_binaria(codigo_buscado: str) -> int:
     """
     Implementa el algoritmo de Búsqueda Binaria O(log2 n) sobre el arreglo de códigos.
-    Precondición: Se asegura que los arreglos estén ordenados ascendentemente por código.
+    Precondición: Se asegura que los arreglos estén ordenados ascendentemente por código
+    (si ya lo están, la burbuja mejorada hace una sola pasada O(n)); se ordena solo en
+    memoria para no reescribir el archivo en cada consulta.
     Retorna el índice del expediente o -1 si no existe.
     """
-    ordenar_expedientes_por_codigo(ascendente=True)
+    ordenar_expedientes_por_codigo(ascendente=True, guardar=False)
     objetivo = normalizar_texto(codigo_buscado)
     izquierda = 0
     derecha = len(codigos) - 1
