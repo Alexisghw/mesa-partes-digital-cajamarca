@@ -36,4 +36,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["--auto", "--simulacion"]:
         ejecutar_simulacion_cajamarca()
     else:
-        menu_interactivo()
+        try:
+            menu_interactivo()
+        except (EOFError, KeyboardInterrupt):
+            # Cada registro ya se guardó en el CSV al momento de hacerse
+            print("\n\nPrograma interrumpido. Los expedientes registrados ya están guardados en el archivo.")
