@@ -18,7 +18,7 @@ Prototipo funcional en **Python 3** que registra, valida, busca (binaria iterati
 | `interfaz.py` | 6 | Menú interactivo por teclado (una función por opción) |
 | `recursividad.py` | 7 | Búsqueda binaria recursiva, suma y conteo recursivos, tabla iterativa vs. recursiva |
 | `analisis.py` | 8 | Conteo de comparaciones e intercambios: Burbuja Mejorado vs. Selección |
-| `tests/test_mesa_partes.py` | — | 24 pruebas automáticas (CP-01 a CP-24) con `unittest` |
+| `tests/test_mesa_partes.py` | — | 27 pruebas automáticas (CP-01 a CP-27) con `unittest` |
 | `main.py` | — | Punto de entrada del programa |
 
 ## Cómo ejecutar
@@ -27,7 +27,7 @@ Requiere Python 3.10 o superior (sin librerías externas).
 ```bash
 python main.py          # menú interactivo (uso normal)
 python main.py --auto   # simulación automática de pruebas
-python -m unittest discover -s tests -v   # pruebas automáticas CP-01 a CP-24
+python -m unittest discover -s tests -v   # pruebas automáticas CP-01 a CP-27
 ```
 
 ### Menú
@@ -54,3 +54,5 @@ python -m unittest discover -s tests -v   # pruebas automáticas CP-01 a CP-24
 - **Inyección SQL:** todas las consultas usan parámetros `?`; un nombre como `Robert'); DROP TABLE expedientes; --` se guarda como texto (pruebas CP-21 y CP-22).
 - **Restricciones de la base:** `CHECK` sobre DNI/RUC, folios (1–500), estado, área y formato del código (CP-23).
 - **Inyección CSV:** la exportación antepone un apóstrofo a los textos que Excel tomaría como fórmula (CP-24).
+- **Entradas raras:** solo se aceptan dígitos del 0 al 9 (no `²`, `７` ni `٣`), con largo máximo de nombre (120) y asunto (250); se quitan caracteres de control (CP-25 y CP-26).
+- **Menú a prueba de errores:** si una opción falla por un dato inesperado, se cancela con un aviso y el error queda en la bitácora; el programa no se cierra (CP-27).

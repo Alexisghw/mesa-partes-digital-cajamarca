@@ -8,8 +8,8 @@ from datos import (ARCHIVO_DATOS, ARCHIVO_EXPORTACION, AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
 from datos import ESTADOS_VALIDOS
 from validacion import (normalizar_texto, validar_dni_o_ruc, validar_nombre_ciudadano,
-                        validar_asunto, validar_folios, validar_opcion_area)
-from persistencia import guardar_padron, cargar_padron, exportar_csv
+                        validar_asunto, validar_folios, validar_opcion_area, es_numero_ascii)
+from persistencia import guardar_padron, cargar_padron, exportar_csv, registrar_auditoria
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_codigo,
                         ordenar_expedientes_por_ciudadano, buscar_por_codigo_binaria,
                         buscar_por_dni_secuencial, mostrar_tabla_expedientes,
@@ -109,7 +109,7 @@ def _opcion_actualizar_estado() -> None:
     for i, estado in enumerate(ESTADOS_VALIDOS, start=1):
         print(f"  [{i}] {estado}")
     eleccion = input(f"Seleccione el nuevo estado (1-{len(ESTADOS_VALIDOS)}): ").strip()
-    if eleccion.isdigit() and 1 <= int(eleccion) <= len(ESTADOS_VALIDOS):
+    if es_numero_ascii(eleccion) and len(eleccion) == 1 and 1 <= int(eleccion) <= len(ESTADOS_VALIDOS):
         eleccion = ESTADOS_VALIDOS[int(eleccion) - 1]
     exito, mensaje = actualizar_estado_expediente(cod_in, eleccion)
     print(f"[ESTADO ACTUALIZADO] {mensaje}" if exito else f"[RECHAZADO] {mensaje.removeprefix('Error: ')}")
@@ -184,6 +184,10 @@ def menu_interactivo() -> None:
             print("\n¡Gracias! Datos persistidos en disco. Cerrando sistema...")
             break
         if opcion in OPCIONES_MENU:
-            OPCIONES_MENU[opcion][1]()
+            try:
+                OPCIONES_MENU[opcion][1]()
+            except Exception as error:   # ninguna entrada puede cerrar el programa con un error de Python
+                registrar_auditoria("ERROR", f"Opción {opcion}: {type(error).__name__}: {error}")
+                print("[ERROR] La operación se canceló por un dato inesperado. Los datos guardados no cambiaron.")
         else:
             print("[ERROR] Opción no válida. Elija una de las opciones del menú.")
