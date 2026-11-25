@@ -10,7 +10,8 @@ from datos import ARCHIVO_DATOS, ARCHIVO_PRUEBAS, ARREGLOS, codigos, ciudadanos,
 from validacion import normalizar_texto
 from persistencia import cargar_desde_archivo
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_ciudadano,
-                        buscar_por_codigo_binaria, mostrar_tabla_expedientes)
+                        buscar_por_codigo_binaria, mostrar_tabla_expedientes,
+                        actualizar_estado_expediente)
 
 
 def ejecutar_simulacion_cajamarca() -> None:
@@ -47,7 +48,7 @@ def ejecutar_simulacion_cajamarca() -> None:
 
 
 def _ejecutar_fases_de_prueba() -> None:
-    """Fases 1 a 5 de la simulación (registro, validación, ordenamiento, búsqueda y persistencia)."""
+    """Fases 1 a 6 de la simulación (registro, validación, ordenamiento, búsqueda, persistencia y estados)."""
     print("=" * 116)
     print("   SISTEMA DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)")
     print("   Contribuye al cumplimiento de la Ley N.° 31170 y Decreto Legislativo N.° 1412 - Prototipo v1.0")
@@ -94,3 +95,11 @@ def _ejecutar_fases_de_prueba() -> None:
     print("\n[FASE 5] VERIFICACIÓN DE PERSISTENCIA EN ARCHIVO ('expedientes_cajamarca.csv'):")
     total_reconstruidos = cargar_desde_archivo()
     print(f"  -> Archivo CSV leído correctamente. Registros recuperados del disco: {total_reconstruidos}")
+
+    print("\n[FASE 6] SEGUIMIENTO: ACTUALIZACIÓN DE ESTADO DE EXPEDIENTES:")
+    cambios = [("EXP-2026-0002", "EN EVALUACIÓN"), ("EXP-2026-0002", "atendido"),
+               ("EXP-2026-0002", "OBSERVADO"), ("EXP-2026-0003", "ARCHIVADO"),
+               ("EXP-2026-0099", "ATENDIDO")]
+    for cod, estado in cambios:
+        exito, msg = actualizar_estado_expediente(cod, estado)
+        print(f"  -> {cod} a '{estado}': {'[ACEPTADO] ' if exito else '[RECHAZADO] '}{msg}")

@@ -8,7 +8,7 @@ import unicodedata
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from datos import AREAS_MUNICIPALES
+from datos import AREAS_MUNICIPALES, ESTADOS_VALIDOS
 
 FOLIOS_MINIMO = 1
 FOLIOS_MAXIMO = 500
@@ -95,6 +95,18 @@ def validar_opcion_area(opcion_texto: str) -> Tuple[bool, int]:
 def validar_indice_area(indice: int) -> bool:
     """Comprueba que un índice interno (0 a 5) exista en AREAS_MUNICIPALES."""
     return 0 <= indice < len(AREAS_MUNICIPALES)
+
+
+def validar_estado(estado_texto: str) -> Tuple[bool, str]:
+    """
+    Valida que el estado sea uno de ESTADOS_VALIDOS. Acepta minúsculas y la palabra
+    sin tilde ('en evaluacion') y retorna el nombre oficial ('EN EVALUACIÓN').
+    """
+    buscado = clave_orden_alfabetico(estado_texto)
+    for estado in ESTADOS_VALIDOS:
+        if clave_orden_alfabetico(estado) == buscado:
+            return True, estado
+    return False, "Error: Estado no válido. Use: " + ", ".join(ESTADOS_VALIDOS) + "."
 
 
 def generar_codigo_expediente(lista_codigos: List[str], anio: Optional[int] = None) -> str:
