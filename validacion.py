@@ -4,13 +4,33 @@
 MÓDULO 2: FUNCIONES DE VALIDACIÓN Y MANIPULACIÓN DE CADENAS DE CARACTERES
 """
 
-from typing import List, Tuple
+import unicodedata
+from datetime import datetime
+from typing import List, Optional, Tuple
+
+from datos import AREAS_MUNICIPALES
+
+FOLIOS_MINIMO = 1
+FOLIOS_MAXIMO = 500
 
 
 def normalizar_texto(texto: str) -> str:
     """Limpia espacios extremos, dobles espacios y convierte a mayúsculas."""
     palabras = texto.strip().upper().split()
     return " ".join(palabras)
+
+
+def clave_orden_alfabetico(texto: str) -> str:
+    """
+    Devuelve la clave con la que se comparan dos nombres al ordenarlos A-Z en español.
+    Python compara cadenas por su código Unicode, por eso 'Á' (193) quedaba después
+    de 'Z' (90). Aquí se quitan las tildes (Á→A, É→E, Ü→U) y la Ñ se reemplaza por
+    'N{' para que quede después de toda palabra con N y antes de la O
+    (el carácter '{' tiene un código mayor que 'Z').
+    """
+    texto = unicodedata.normalize("NFC", normalizar_texto(texto)).replace("Ñ", "N{")
+    descompuesto = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in descompuesto if unicodedata.category(c) != "Mn")
 
 
 def validar_dni_o_ruc(documento: str) -> Tuple[bool, str]:
@@ -53,16 +73,38 @@ def validar_folios(valor_texto: str) -> Tuple[bool, int]:
     if not limpio.isdigit():
         return False, 0
     num = int(limpio)
-    if 1 <= num <= 500:
+    if FOLIOS_MINIMO <= num <= FOLIOS_MAXIMO:
         return True, num
     return False, 0
 
 
-def generar_codigo_expediente(lista_codigos: List[str], anio: int = 2026) -> str:
+def validar_opcion_area(opcion_texto: str) -> Tuple[bool, int]:
     """
-    Genera automáticamente un código único con formato EXP-2026-XXXX
+    El usuario elige el área con un número del 1 al 6 (como en el informe).
+    Retorna (True, índice del arreglo AREAS_MUNICIPALES) = opción - 1, o (False, -1).
+    """
+    limpio = str(opcion_texto).strip()
+    if not limpio.isdigit():
+        return False, -1
+    opcion = int(limpio)
+    if 1 <= opcion <= len(AREAS_MUNICIPALES):
+        return True, opcion - 1
+    return False, -1
+
+
+def validar_indice_area(indice: int) -> bool:
+    """Comprueba que un índice interno (0 a 5) exista en AREAS_MUNICIPALES."""
+    return 0 <= indice < len(AREAS_MUNICIPALES)
+
+
+def generar_codigo_expediente(lista_codigos: List[str], anio: Optional[int] = None) -> str:
+    """
+    Genera automáticamente un código único con formato EXP-AAAA-XXXX
     extrayendo el correlativo máximo mediante descomposición de cadenas (.split('-')).
+    El año se toma de la fecha del sistema si no se indica.
     """
+    if anio is None:
+        anio = datetime.now().year
     if len(lista_codigos) == 0:
         return f"EXP-{anio}-0001"
     max_correlativo = 0
