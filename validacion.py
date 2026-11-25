@@ -12,11 +12,24 @@ from datos import AREAS_MUNICIPALES, ESTADOS_VALIDOS
 
 FOLIOS_MINIMO = 1
 FOLIOS_MAXIMO = 500
+LARGO_MAXIMO_NOMBRE = 120   # mismos límites que las restricciones CHECK de la base
+LARGO_MAXIMO_ASUNTO = 250
+DIGITOS = "0123456789"
+
+
+def es_numero_ascii(texto: str) -> bool:
+    """
+    True solo si el texto tiene únicamente dígitos del 0 al 9.
+    No se usa str.isdigit() porque acepta otros símbolos Unicode como dígitos
+    ('²', '７', '٣'): luego int('²') lanza ValueError y el programa se caía.
+    """
+    return len(texto) > 0 and all(c in DIGITOS for c in texto)
 
 
 def normalizar_texto(texto: str) -> str:
-    """Limpia espacios extremos, dobles espacios y convierte a mayúsculas."""
-    palabras = texto.strip().upper().split()
+    """Quita caracteres de control o invisibles, espacios extremos y dobles, y convierte a mayúsculas."""
+    visible = "".join(c if c.isprintable() else " " for c in str(texto))
+    palabras = visible.strip().upper().split()
     return " ".join(palabras)
 
 
@@ -39,7 +52,7 @@ def validar_dni_o_ruc(documento: str) -> Tuple[bool, str]:
     o un RUC (11 dígitos que inicia en 10 o 20) compuesto exclusivamente por números.
     """
     doc_limpio = documento.strip()
-    if not doc_limpio.isdigit():
+    if not es_numero_ascii(doc_limpio):
         return False, "Error: El documento debe contener únicamente dígitos numéricos (0-9)."
     if len(doc_limpio) == 8:
         return True, doc_limpio
@@ -53,6 +66,10 @@ def validar_nombre_ciudadano(nombre: str) -> Tuple[bool, str]:
     nombre_norm = normalizar_texto(nombre)
     if len(nombre_norm) < 5:
         return False, "Error: El nombre del ciudadano debe tener al menos 5 caracteres."
+    if len(nombre_norm) > LARGO_MAXIMO_NOMBRE:
+        return False, f"Error: El nombre del ciudadano no puede pasar de {LARGO_MAXIMO_NOMBRE} caracteres."
+    if not any(c.isalpha() for c in nombre_norm):
+        return False, "Error: El nombre del ciudadano debe contener letras."
     sin_espacios = nombre_norm.replace(" ", "").replace(",", "").replace(".", "")
     if sin_espacios.isdigit():
         return False, "Error: El nombre del ciudadano no puede estar compuesto solo por números."
@@ -64,13 +81,15 @@ def validar_asunto(asunto: str) -> Tuple[bool, str]:
     asunto_norm = normalizar_texto(asunto).replace(";", ",")
     if len(asunto_norm) < 8:
         return False, "Error: El asunto debe detallar el trámite (mínimo 8 caracteres)."
+    if len(asunto_norm) > LARGO_MAXIMO_ASUNTO:
+        return False, f"Error: El asunto no puede pasar de {LARGO_MAXIMO_ASUNTO} caracteres."
     return True, asunto_norm
 
 
 def validar_folios(valor_texto: str) -> Tuple[bool, int]:
     """Valida que el número de folios sea un entero positivo entre 1 y 500."""
     limpio = str(valor_texto).strip()
-    if not limpio.isdigit():
+    if not es_numero_ascii(limpio) or len(limpio) > 4:
         return False, 0
     num = int(limpio)
     if FOLIOS_MINIMO <= num <= FOLIOS_MAXIMO:
@@ -84,7 +103,7 @@ def validar_opcion_area(opcion_texto: str) -> Tuple[bool, int]:
     Retorna (True, índice del arreglo AREAS_MUNICIPALES) = opción - 1, o (False, -1).
     """
     limpio = str(opcion_texto).strip()
-    if not limpio.isdigit():
+    if not es_numero_ascii(limpio) or len(limpio) > 2:
         return False, -1
     opcion = int(limpio)
     if 1 <= opcion <= len(AREAS_MUNICIPALES):
@@ -114,16 +133,17 @@ def validar_codigo_expediente(codigo: str) -> bool:
     partes = codigo.strip().split("-")
     return (len(partes) == 3 and partes[0] == "EXP"
             and len(partes[1]) == 4 and len(partes[2]) == 4
-            and all(c in "0123456789" for c in partes[1] + partes[2]))
+            and es_numero_ascii(partes[1] + partes[2]))
 
 
 def neutralizar_formula_csv(texto: str) -> str:
     """
-    Evita la inyección CSV: si un texto empieza con = + - @ (o tabulación), Excel lo
+    Evita la inyección CSV: si un texto empieza con = + - @ (o tabulación o sus variantes
+    de ancho completo), Excel lo
     interpretaría como fórmula al abrir el archivo. Se antepone un apóstrofo para que
     se muestre como texto común.
     """
-    if texto and texto[0] in "=+-@\t\r":
+    if texto and texto[0] in "=+-@\t\r\n＝＋－＠":   # lista de OWASP, con variantes de ancho completo
         return "'" + texto
     return texto
 
@@ -141,7 +161,7 @@ def generar_codigo_expediente(lista_codigos: List[str], anio: Optional[int] = No
     max_correlativo = 0
     for cod in lista_codigos:
         partes = cod.split("-")
-        if len(partes) == 3 and partes[2].isdigit():
+        if len(partes) == 3 and es_numero_ascii(partes[2]):
             corr = int(partes[2])
             if corr > max_correlativo:
                 max_correlativo = corr
