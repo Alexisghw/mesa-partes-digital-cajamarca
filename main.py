@@ -18,6 +18,7 @@ Organización en módulos:
     algoritmos.py    -> Módulo 4: inserción, ordenamiento y búsqueda
     pruebas.py       -> Módulo 5: simulación de pruebas con datos de campo
     interfaz.py      -> Módulo 6: menú interactivo por teclado
+    recursividad.py  -> Módulo 7: búsqueda binaria recursiva y reporte recursivo
 
 Ejecución:
     python main.py          -> menú interactivo
