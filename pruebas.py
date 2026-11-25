@@ -6,7 +6,7 @@ MÓDULO 5: SIMULACIÓN DE PRUEBAS AUTOMÁTICAS CON DATOS DE CAMPO (CAJAMARCA)
 
 import os
 
-from datos import ARCHIVO_DATOS, codigos, ciudadanos, areas, fechas
+from datos import ARCHIVO_DATOS, ARCHIVO_PRUEBAS, ARREGLOS, codigos, ciudadanos, areas, fechas
 from validacion import normalizar_texto
 from persistencia import cargar_desde_archivo
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_ciudadano,
@@ -18,13 +18,39 @@ def ejecutar_simulacion_cajamarca() -> None:
     Carga los datos recogidos en la práctica de campo en la Municipalidad Distrital
     de Los Baños del Inca (Cajamarca) y ejecuta las pruebas de validación,
     ordenamiento, búsqueda y persistencia.
+    Las pruebas se ejecutan sobre un padrón vacío; al terminar se restaura el padrón
+    real (arreglos y archivo) y el resultado de las pruebas queda en ARCHIVO_PRUEBAS.
     """
+    # Respaldo del padrón real: así las pruebas no borran ni duplican expedientes
+    respaldo_arreglos = [lista.copy() for lista in ARREGLOS]
+    respaldo_archivo = None
     if os.path.exists(ARCHIVO_DATOS):
-        os.remove(ARCHIVO_DATOS)
+        with open(ARCHIVO_DATOS, mode="r", encoding="utf-8", newline="") as archivo:
+            respaldo_archivo = archivo.read()
+    for lista in ARREGLOS:
+        lista.clear()
 
+    try:
+        _ejecutar_fases_de_prueba()
+    finally:
+        # Se conserva el resultado de las pruebas como evidencia y se restaura el padrón real
+        if os.path.exists(ARCHIVO_DATOS):
+            os.replace(ARCHIVO_DATOS, ARCHIVO_PRUEBAS)
+        if respaldo_archivo is not None:
+            with open(ARCHIVO_DATOS, mode="w", encoding="utf-8", newline="") as archivo:
+                archivo.write(respaldo_archivo)
+        for lista, copia in zip(ARREGLOS, respaldo_arreglos):
+            lista.clear()
+            lista.extend(copia)
+        print(f"\n[FIN DE PRUEBAS] Resultado guardado en '{ARCHIVO_PRUEBAS}'. "
+              f"El padrón real de '{ARCHIVO_DATOS}' quedó sin cambios.")
+
+
+def _ejecutar_fases_de_prueba() -> None:
+    """Fases 1 a 5 de la simulación (registro, validación, ordenamiento, búsqueda y persistencia)."""
     print("=" * 116)
     print("   SISTEMA DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)")
-    print("   Cumplimiento de la Ley N.° 31170 y Decreto Legislativo N.° 1412 - Prototipo v1.0")
+    print("   Contribuye al cumplimiento de la Ley N.° 31170 y Decreto Legislativo N.° 1412 - Prototipo v1.0")
     print("=" * 116)
 
     datos_campo = [

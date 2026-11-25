@@ -7,7 +7,7 @@ MÓDULO 6: MENÚ INTERACTIVO POR TECLADO (INTERFAZ DE USUARIO EN CONSOLA)
 from datos import (ARCHIVO_DATOS, AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
 from validacion import (normalizar_texto, validar_dni_o_ruc, validar_nombre_ciudadano,
-                        validar_asunto, validar_folios)
+                        validar_asunto, validar_folios, validar_opcion_area)
 from persistencia import guardar_en_archivo, cargar_desde_archivo
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_codigo,
                         ordenar_expedientes_por_ciudadano, buscar_por_codigo_binaria,
@@ -57,13 +57,13 @@ def menu_interactivo() -> None:
                 continue
 
             print("\nÁreas de destino municipal disponibles:")
-            for i, area in enumerate(AREAS_MUNICIPALES):
+            for i, area in enumerate(AREAS_MUNICIPALES, start=1):
                 print(f"  [{i}] {area}")
-            area_str = input("Seleccione el número de área (0-5): ").strip()
-            if not area_str.isdigit() or not (0 <= int(area_str) < len(AREAS_MUNICIPALES)):
+            area_str = input(f"Seleccione el número de área (1-{len(AREAS_MUNICIPALES)}): ").strip()
+            ok_area, area_idx = validar_opcion_area(area_str)   # área 1 -> índice 0
+            if not ok_area:
                 print("[ERROR] Selección de área inválida.")
                 continue
-            area_idx = int(area_str)
 
             folios_str = input("Ingrese número de folios (1-500): ").strip()
             ok_fol, num_fol = validar_folios(folios_str)

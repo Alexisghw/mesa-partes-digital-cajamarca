@@ -9,8 +9,9 @@ from typing import List, Tuple
 
 from datos import (AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
-from validacion import (normalizar_texto, validar_dni_o_ruc, validar_nombre_ciudadano,
-                        validar_asunto, generar_codigo_expediente)
+from validacion import (normalizar_texto, clave_orden_alfabetico, validar_dni_o_ruc,
+                        validar_nombre_ciudadano, validar_asunto, validar_folios,
+                        validar_indice_area, generar_codigo_expediente)
 from persistencia import guardar_en_archivo, registrar_auditoria
 
 
@@ -25,6 +26,8 @@ def insertar_expediente(
     """
     Valida las entradas, genera el código único, inserta en los arreglos paralelos
     y sincroniza inmediatamente con el archivo CSV.
+    indice_area es el índice interno 0-5 (el menú convierte la opción 1-6 con validar_opcion_area).
+    Todas las reglas se consultan en validacion.py, para no repetirlas aquí (principio DRY).
     """
     ok_dni, res_dni = validar_dni_o_ruc(dni_doc)
     if not ok_dni:
@@ -38,10 +41,11 @@ def insertar_expediente(
     if not ok_asu:
         return False, res_asu
 
-    if not (0 <= indice_area < len(AREAS_MUNICIPALES)):
-        return False, "Error: El índice de área municipal seleccionada no es válido."
+    if not validar_indice_area(indice_area):
+        return False, "Error: El área municipal seleccionada no es válida (opciones 1 a 6)."
 
-    if not (1 <= num_folios <= 500):
+    ok_fol, num_folios = validar_folios(str(num_folios))
+    if not ok_fol:
         return False, "Error: El número de folios debe estar entre 1 y 500."
 
     nuevo_codigo = generar_codigo_expediente(codigos)
@@ -99,12 +103,14 @@ def ordenar_expedientes_por_ciudadano() -> None:
     """
     Ordena alfabéticamente (A-Z) los expedientes por apellido/nombre del ciudadano
     con el mismo Burbuja Mejorado (bandera de corte temprano) y guarda el nuevo orden.
+    Compara con clave_orden_alfabetico para que 'ÁLVAREZ' quede con la A y 'ÑONTOL'
+    después de la N, como en un directorio en español.
     """
     n = len(ciudadanos)
     for i in range(n - 1):
         hubo_intercambio = False
         for j in range(0, n - i - 1):
-            if ciudadanos[j] > ciudadanos[j + 1]:
+            if clave_orden_alfabetico(ciudadanos[j]) > clave_orden_alfabetico(ciudadanos[j + 1]):
                 intercambiar_indices(j, j + 1)
                 hubo_intercambio = True
         if not hubo_intercambio:
