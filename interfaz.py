@@ -4,12 +4,12 @@
 MÓDULO 6: MENÚ INTERACTIVO POR TECLADO (INTERFAZ DE USUARIO EN CONSOLA)
 """
 
-from datos import (ARCHIVO_DATOS, AREAS_MUNICIPALES,
+from datos import (ARCHIVO_DATOS, ARCHIVO_EXPORTACION, AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
 from datos import ESTADOS_VALIDOS
 from validacion import (normalizar_texto, validar_dni_o_ruc, validar_nombre_ciudadano,
                         validar_asunto, validar_folios, validar_opcion_area)
-from persistencia import guardar_en_archivo, cargar_desde_archivo
+from persistencia import guardar_padron, cargar_padron, exportar_csv
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_codigo,
                         ordenar_expedientes_por_ciudadano, buscar_por_codigo_binaria,
                         buscar_por_dni_secuencial, mostrar_tabla_expedientes,
@@ -63,7 +63,7 @@ def _opcion_registrar() -> None:
         print(f"  Código Asignado: {cod_generado}")
         print(f"  Administrado:    {normalizar_texto(nombre_in)}")
         print(f"  Destino:         {AREAS_MUNICIPALES[area_idx]}")
-        print(f"  Persistido en:   {ARCHIVO_DATOS}")
+        print(f"  Guardado en:     {ARCHIVO_DATOS} (SQLite)")
         print("*" * 60)
     else:
         print(f"[ERROR] No se pudo registrar: {cod_generado.removeprefix('Error: ')}")
@@ -141,6 +141,12 @@ def _opcion_reporte_recursivo() -> None:
     print(reporte_recursivo())
 
 
+def _opcion_exportar_csv() -> None:
+    """Opción 10: copia del padrón en CSV para abrir en Excel (con fórmulas neutralizadas)."""
+    if exportar_csv():
+        print(f"\n[EXPORTADO] {len(codigos)} expedientes en '{ARCHIVO_EXPORTACION}' (se abre con Excel).")
+
+
 # Opciones del menú: número -> (texto que se muestra, función que se ejecuta)
 OPCIONES_MENU = {
     "1": ("Registrar nuevo expediente por teclado", _opcion_registrar),
@@ -152,6 +158,7 @@ OPCIONES_MENU = {
     "7": ("Reporte de folios y estados (funciones recursivas)", _opcion_reporte_recursivo),
     "8": ("Comparar algoritmos (iterativo vs. recursivo, Burbuja vs. Selección)", _opcion_comparar_algoritmos),
     "9": ("Ejecutar simulación automática con datos de Cajamarca", ejecutar_simulacion_cajamarca),
+    "10": ("Exportar el padrón a CSV para Excel", _opcion_exportar_csv),
 }
 OPCION_SALIR = "0"
 
@@ -161,7 +168,7 @@ def menu_interactivo() -> None:
     Menú interactivo por consola que permite al usuario o evaluador introducir
     datos en vivo por teclado para registrar, buscar, ordenar y persistir trámites.
     """
-    cargar_desde_archivo()
+    cargar_padron()
     while True:
         print("\n" + "=" * 70)
         print("  MESA DE PARTES DIGITAL — MUNICIPALIDAD DE LOS BAÑOS DEL INCA (CAJAMARCA)")
@@ -173,7 +180,7 @@ def menu_interactivo() -> None:
 
         opcion = input("Seleccione una opción: ").strip()
         if opcion == OPCION_SALIR:
-            guardar_en_archivo()
+            guardar_padron()
             print("\n¡Gracias! Datos persistidos en disco. Cerrando sistema...")
             break
         if opcion in OPCIONES_MENU:

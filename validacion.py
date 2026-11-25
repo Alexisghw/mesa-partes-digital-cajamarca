@@ -109,6 +109,25 @@ def validar_estado(estado_texto: str) -> Tuple[bool, str]:
     return False, "Error: Estado no válido. Use: " + ", ".join(ESTADOS_VALIDOS) + "."
 
 
+def validar_codigo_expediente(codigo: str) -> bool:
+    """Comprueba el formato EXP-AAAA-XXXX (solo dígitos 0-9 en el año y el correlativo)."""
+    partes = codigo.strip().split("-")
+    return (len(partes) == 3 and partes[0] == "EXP"
+            and len(partes[1]) == 4 and len(partes[2]) == 4
+            and all(c in "0123456789" for c in partes[1] + partes[2]))
+
+
+def neutralizar_formula_csv(texto: str) -> str:
+    """
+    Evita la inyección CSV: si un texto empieza con = + - @ (o tabulación), Excel lo
+    interpretaría como fórmula al abrir el archivo. Se antepone un apóstrofo para que
+    se muestre como texto común.
+    """
+    if texto and texto[0] in "=+-@\t\r":
+        return "'" + texto
+    return texto
+
+
 def generar_codigo_expediente(lista_codigos: List[str], anio: Optional[int] = None) -> str:
     """
     Genera automáticamente un código único con formato EXP-AAAA-XXXX
