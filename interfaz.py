@@ -6,15 +6,18 @@ MÓDULO 6: MENÚ INTERACTIVO POR TECLADO (INTERFAZ DE USUARIO EN CONSOLA)
 
 from datos import (ARCHIVO_DATOS, AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
+from datos import ESTADOS_VALIDOS
 from validacion import (normalizar_texto, validar_dni_o_ruc, validar_nombre_ciudadano,
                         validar_asunto, validar_folios, validar_opcion_area)
 from persistencia import guardar_en_archivo, cargar_desde_archivo
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_codigo,
                         ordenar_expedientes_por_ciudadano, buscar_por_codigo_binaria,
-                        buscar_por_dni_secuencial, mostrar_tabla_expedientes)
+                        buscar_por_dni_secuencial, mostrar_tabla_expedientes,
+                        actualizar_estado_expediente)
 from pruebas import ejecutar_simulacion_cajamarca
 from recursividad import (reporte_recursivo, comparar_iterativa_vs_recursiva,
                           buscar_por_codigo_recursiva)
+from analisis import comparar_burbuja_vs_seleccion
 
 
 def _opcion_registrar() -> None:
@@ -23,19 +26,19 @@ def _opcion_registrar() -> None:
     dni_in = input("Ingrese DNI (8 dígitos) o RUC (11 dígitos): ").strip()
     ok_dni, msg_dni = validar_dni_o_ruc(dni_in)
     if not ok_dni:
-        print(f"[ERROR] {msg_dni}")
+        print(f"[ERROR] {msg_dni.removeprefix('Error: ')}")
         return
 
     nombre_in = input("Ingrese Apellidos y Nombres (o Razón Social): ").strip()
     ok_nom, msg_nom = validar_nombre_ciudadano(nombre_in)
     if not ok_nom:
-        print(f"[ERROR] {msg_nom}")
+        print(f"[ERROR] {msg_nom.removeprefix('Error: ')}")
         return
 
     asunto_in = input("Ingrese Asunto del trámite: ").strip()
     ok_asu, msg_asu = validar_asunto(asunto_in)
     if not ok_asu:
-        print(f"[ERROR] {msg_asu}")
+        print(f"[ERROR] {msg_asu.removeprefix('Error: ')}")
         return
 
     print("\nÁreas de destino municipal disponibles:")
@@ -63,7 +66,7 @@ def _opcion_registrar() -> None:
         print(f"  Persistido en:   {ARCHIVO_DATOS}")
         print("*" * 60)
     else:
-        print(f"[ERROR] No se pudo registrar: {cod_generado}")
+        print(f"[ERROR] No se pudo registrar: {cod_generado.removeprefix('Error: ')}")
 
 
 def _opcion_buscar_codigo() -> None:
@@ -99,6 +102,25 @@ def _opcion_buscar_dni() -> None:
         print(f"\n[AVISO] No hay expedientes registrados para el DNI/RUC '{dni_in}'.")
 
 
+def _opcion_actualizar_estado() -> None:
+    """Opción 4: cambia el estado de un expediente (seguimiento del trámite)."""
+    cod_in = input("\nIngrese el código del expediente (ej. EXP-2026-0001): ").strip()
+    print("Estados disponibles:")
+    for i, estado in enumerate(ESTADOS_VALIDOS, start=1):
+        print(f"  [{i}] {estado}")
+    eleccion = input(f"Seleccione el nuevo estado (1-{len(ESTADOS_VALIDOS)}): ").strip()
+    if eleccion.isdigit() and 1 <= int(eleccion) <= len(ESTADOS_VALIDOS):
+        eleccion = ESTADOS_VALIDOS[int(eleccion) - 1]
+    exito, mensaje = actualizar_estado_expediente(cod_in, eleccion)
+    print(f"[ESTADO ACTUALIZADO] {mensaje}" if exito else f"[RECHAZADO] {mensaje.removeprefix('Error: ')}")
+
+
+def _opcion_comparar_algoritmos() -> None:
+    """Opción 8: tabla iterativa vs. recursiva y tabla Burbuja vs. Selección."""
+    comparar_iterativa_vs_recursiva()
+    comparar_burbuja_vs_seleccion()
+
+
 def _opcion_listar_por_codigo() -> None:
     """Lista el padrón ordenado por código (Burbuja Mejorado)."""
     ordenar_expedientes_por_codigo(ascendente=True)
@@ -124,13 +146,14 @@ OPCIONES_MENU = {
     "1": ("Registrar nuevo expediente por teclado", _opcion_registrar),
     "2": ("Buscar expediente por código (Búsqueda Binaria O(log2 n))", _opcion_buscar_codigo),
     "3": ("Buscar expedientes por DNI/RUC del ciudadano", _opcion_buscar_dni),
-    "4": ("Listar expedientes ordenados por código", _opcion_listar_por_codigo),
-    "5": ("Listar expedientes ordenados alfabéticamente por ciudadano", _opcion_listar_por_ciudadano),
-    "6": ("Reporte de folios y estados (funciones recursivas)", _opcion_reporte_recursivo),
-    "7": ("Comparar búsqueda binaria iterativa vs. recursiva", comparar_iterativa_vs_recursiva),
-    "8": ("Ejecutar simulación automática con datos de Cajamarca", ejecutar_simulacion_cajamarca),
+    "4": ("Actualizar el estado de un expediente", _opcion_actualizar_estado),
+    "5": ("Listar expedientes ordenados por código", _opcion_listar_por_codigo),
+    "6": ("Listar expedientes ordenados alfabéticamente por ciudadano", _opcion_listar_por_ciudadano),
+    "7": ("Reporte de folios y estados (funciones recursivas)", _opcion_reporte_recursivo),
+    "8": ("Comparar algoritmos (iterativo vs. recursivo, Burbuja vs. Selección)", _opcion_comparar_algoritmos),
+    "9": ("Ejecutar simulación automática con datos de Cajamarca", ejecutar_simulacion_cajamarca),
 }
-OPCION_SALIR = "9"
+OPCION_SALIR = "0"
 
 
 def menu_interactivo() -> None:

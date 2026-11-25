@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MÓDULO 4: OPERACIONES ALGORÍTMICAS (INSERCIÓN, ORDENAMIENTO Y BÚSQUEDA)
+MÓDULO 4: OPERACIONES ALGORÍTMICAS (INSERCIÓN, ACTUALIZACIÓN, ORDENAMIENTO Y BÚSQUEDA)
+Los ordenamientos aceptan un diccionario 'contador' opcional donde suman comparaciones
+e intercambios; así el Módulo 8 compara Burbuja y Selección usando estas mismas funciones.
 """
 
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from datos import (AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
 from validacion import (normalizar_texto, clave_orden_alfabetico, validar_dni_o_ruc,
                         validar_nombre_ciudadano, validar_asunto, validar_folios,
-                        validar_indice_area, generar_codigo_expediente)
+                        validar_indice_area, validar_estado, generar_codigo_expediente)
 from persistencia import guardar_en_archivo, registrar_auditoria
 
 
@@ -78,7 +80,8 @@ def intercambiar_indices(i: int, j: int) -> None:
     estados[i], estados[j] = estados[j], estados[i]
 
 
-def ordenar_expedientes_por_codigo(ascendente: bool = True, guardar: bool = True) -> None:
+def ordenar_expedientes_por_codigo(ascendente: bool = True, guardar: bool = True,
+                                   contador: Optional[Dict[str, int]] = None) -> None:
     """
     Algoritmo de Ordenamiento Burbuja Mejorado (con bandera de corte temprano)
     aplicado sobre el arreglo de códigos y sincronizado con los arreglos paralelos.
@@ -90,9 +93,13 @@ def ordenar_expedientes_por_codigo(ascendente: bool = True, guardar: bool = True
         hubo_intercambio = False
         for j in range(0, n - i - 1):
             condicion = (codigos[j] > codigos[j + 1]) if ascendente else (codigos[j] < codigos[j + 1])
+            if contador is not None:
+                contador["comparaciones"] += 1
             if condicion:
                 intercambiar_indices(j, j + 1)
                 hubo_intercambio = True
+                if contador is not None:
+                    contador["intercambios"] += 1
         if not hubo_intercambio:
             break
     if guardar:
@@ -149,6 +156,55 @@ def buscar_por_codigo_binaria(codigo_buscado: str) -> int:
     """
     ordenar_expedientes_por_codigo(ascendente=True, guardar=False)
     return busqueda_binaria_iterativa(codigos, normalizar_texto(codigo_buscado))
+
+
+def ordenar_expedientes_por_codigo_seleccion(guardar: bool = True,
+                                             contador: Optional[Dict[str, int]] = None) -> None:
+    """
+    Ordenamiento por Selección (ascendente por código), alternativa comparada con Burbuja.
+    En cada pasada i busca el menor código entre i y n-1 y lo lleva a la posición i
+    con un solo intercambio sincronizado de los 8 arreglos.
+    Comparaciones: siempre n(n-1)/2, aunque el padrón ya esté ordenado.
+    Intercambios: a lo más n-1 (Burbuja puede hacer hasta n(n-1)/2).
+    """
+    n = len(codigos)
+    for i in range(n - 1):
+        pos_menor = i
+        for j in range(i + 1, n):
+            if contador is not None:
+                contador["comparaciones"] += 1
+            if codigos[j] < codigos[pos_menor]:
+                pos_menor = j
+        if pos_menor != i:
+            intercambiar_indices(i, pos_menor)
+            if contador is not None:
+                contador["intercambios"] += 1
+    if guardar:
+        guardar_en_archivo()
+
+
+def actualizar_estado_expediente(codigo_buscado: str, estado_nuevo: str) -> Tuple[bool, str]:
+    """
+    Cambia el estado de un expediente (REGISTRADO -> EN EVALUACIÓN -> OBSERVADO / ATENDIDO).
+    Pasos: valida el estado, ubica el expediente con la búsqueda binaria, aplica las reglas
+    y guarda el CSV y la bitácora. Reglas: un expediente ATENDIDO ya no se modifica y no se
+    acepta "cambiar" al mismo estado que ya tiene.
+    """
+    ok_est, estado_oficial = validar_estado(estado_nuevo)
+    if not ok_est:
+        return False, estado_oficial
+    pos = buscar_por_codigo_binaria(codigo_buscado)
+    if pos == -1:
+        return False, f"Error: No existe el expediente '{normalizar_texto(codigo_buscado)}'."
+    estado_anterior = estados[pos]
+    if estado_anterior == "ATENDIDO":
+        return False, f"Error: {codigos[pos]} ya fue ATENDIDO; su estado no puede cambiar."
+    if estado_anterior == estado_oficial:
+        return False, f"Error: {codigos[pos]} ya se encuentra en estado {estado_oficial}."
+    estados[pos] = estado_oficial
+    guardar_en_archivo()
+    registrar_auditoria("ESTADO", f"{codigos[pos]}: {estado_anterior} -> {estado_oficial}")
+    return True, f"{codigos[pos]}: {estado_anterior} -> {estado_oficial}"
 
 
 def buscar_por_dni_secuencial(dni_buscado: str) -> List[int]:

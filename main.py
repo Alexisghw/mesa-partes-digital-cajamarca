@@ -8,7 +8,8 @@ Normativa vinculada: Ley N.° 31170 y Decreto Legislativo N.° 1412 (Ley de Gobi
 
 Descripción técnica:
 Este sistema implementa el registro interactivo por teclado, validación con lógica proposicional,
-búsqueda binaria O(log2 n), ordenamiento Burbuja Mejorado sobre 8 arreglos paralelos
+búsqueda binaria O(log2 n) iterativa y recursiva, ordenamiento Burbuja Mejorado y Selección
+sobre 8 arreglos paralelos, actualización de estado
 y persistencia permanente en archivos estructurados CSV (UTF-8).
 
 Organización en módulos:
@@ -19,10 +20,12 @@ Organización en módulos:
     pruebas.py       -> Módulo 5: simulación de pruebas con datos de campo
     interfaz.py      -> Módulo 6: menú interactivo por teclado
     recursividad.py  -> Módulo 7: búsqueda binaria recursiva y reporte recursivo
+    analisis.py      -> Módulo 8: comparación Burbuja Mejorado vs. Selección
 
 Ejecución:
     python main.py          -> menú interactivo
     python main.py --auto   -> simulación automática de pruebas
+    python -m unittest discover -s tests -v   -> pruebas automáticas
 """
 
 import sys
