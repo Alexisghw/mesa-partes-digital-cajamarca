@@ -43,5 +43,5 @@ if __name__ == "__main__":
         try:
             menu_interactivo()
         except (EOFError, KeyboardInterrupt):
-            # Cada registro ya se guardó en el CSV al momento de hacerse
-            print("\n\nPrograma interrumpido. Los expedientes registrados ya están guardados en el archivo.")
+            # Cada registro ya se guardó en la base SQLite al momento de hacerse
+            print("\n\nPrograma interrumpido. Los expedientes registrados ya están guardados en la base de datos.")

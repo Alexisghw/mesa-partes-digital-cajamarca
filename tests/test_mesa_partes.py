@@ -12,6 +12,7 @@ import io
 import contextlib
 import os
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -268,6 +269,39 @@ class TestSeguridadSQLite(BaseConCarpetaTemporal):
         self.assertIn("'=HYPERLINK", contenido)
         self.assertIn("'@SUMA", contenido)
         self.assertIn("'+ASUNTO", contenido)
+
+
+class TestEntradasMaliciosas(unittest.TestCase):
+    """CP-25 a CP-27: entradas que antes rompían o engañaban al programa."""
+
+    def test_cp25_digitos_unicode_rechazados_sin_error(self):
+        for raro in ["７１４５８９２３", "٧١٤٥٨٩٢٣", "7145892³", "²"]:
+            self.assertFalse(validar_dni_o_ruc(raro)[0], raro)
+        for raro in ["²", "１０", "٣", "99999"]:
+            self.assertEqual(validar_folios(raro), (False, 0), raro)       # antes: ValueError
+            self.assertFalse(validar_opcion_area(raro)[0], raro)
+        self.assertEqual(generar_codigo_expediente(["EXP-2026-000²"], 2026), "EXP-2026-0001")
+        from validacion import neutralizar_formula_csv
+        self.assertEqual(neutralizar_formula_csv("＝SUMA(1;1)"), "'＝SUMA(1;1)")   # '=' de ancho completo
+
+    def test_cp26_largos_control_y_letras(self):
+        self.assertFalse(validar_nombre_ciudadano("A" * 121)[0])
+        self.assertTrue(validar_nombre_ciudadano("A" * 120)[0])            # límite
+        self.assertFalse(validar_asunto("B" * 251)[0])
+        self.assertFalse(validar_nombre_ciudadano("!!!!! ?????")[0])       # sin letras
+        self.assertEqual(validar_nombre_ciudadano("Ana\x1b[2J\x07 Ruiz\u200b")[1], "ANA [2J RUIZ")
+
+    def test_cp27_el_menu_no_se_cae_con_entradas_raras(self):
+        entradas = "\n".join(["²", "abc", "-1", "99", "1", "71458923", "Ana Ruiz Perez", "Licencia de funcionamiento",
+                               "²", "1", "71458923", "Ana Ruiz Perez", "Licencia de funcionamiento", "1", "³",
+                               "4", "EXP-2026-0001", "²", "4", "' OR '1'='1", "2", "3", "x' OR 1=1 --", "0"]) + "\n"
+        raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with tempfile.TemporaryDirectory() as tmp:
+            r = subprocess.run([sys.executable, os.path.join(raiz, "main.py")], input=entradas, cwd=tmp,
+                               capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0)
+        self.assertNotIn("Traceback", r.stdout + r.stderr)
+        self.assertIn("Cerrando sistema", r.stdout)
 
 
 if __name__ == "__main__":
