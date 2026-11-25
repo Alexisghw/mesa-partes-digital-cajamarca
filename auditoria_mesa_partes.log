@@ -13,3 +13,17 @@
 [2026-10-19 17:11:21] [PERSISTENCIA] Se guardaron 6 expedientes en expedientes_cajamarca.csv.
 [2026-10-19 17:11:21] [PERSISTENCIA] Se guardaron 6 expedientes en expedientes_cajamarca.csv.
 [2026-10-19 17:11:21] [CARGA_INICIAL] Se cargaron 6 expedientes desde expedientes_cajamarca.csv.
+[2026-11-25 00:54:41] [MIGRACION] 6 expedientes migrados de expedientes_cajamarca.csv a mesa_partes.db; 0 descartados.
+[2026-11-25 00:54:41] [CARGA_INICIAL] Se cargaron 6 expedientes desde mesa_partes.db.
+[2026-11-25 00:55:15] [PERSISTENCIA] Se guardaron 6 expedientes en mesa_partes.db.
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0001 - DNI/RUC: 71458923
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0002 - DNI/RUC: 42891034
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0003 - DNI/RUC: 20453891201
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0004 - DNI/RUC: 26704512
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0005 - DNI/RUC: 73901248
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0006 - DNI/RUC: 40129876
+[2026-11-25 00:55:18] [PERSISTENCIA] Se guardaron 6 expedientes en mesa_partes_prueba.db.
+[2026-11-25 00:55:18] [CARGA_INICIAL] Se cargaron 6 expedientes desde mesa_partes_prueba.db.
+[2026-11-25 00:55:18] [ESTADO] EXP-2026-0002: REGISTRADO -> EN EVALUACIÓN
+[2026-11-25 00:55:18] [ESTADO] EXP-2026-0002: EN EVALUACIÓN -> ATENDIDO
+[2026-11-25 00:55:18] [REGISTRO] Nuevo expediente EXP-2026-0007 - DNI/RUC: 74892011

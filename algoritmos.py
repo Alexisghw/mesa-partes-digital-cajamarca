@@ -14,7 +14,8 @@ from datos import (AREAS_MUNICIPALES,
 from validacion import (normalizar_texto, clave_orden_alfabetico, validar_dni_o_ruc,
                         validar_nombre_ciudadano, validar_asunto, validar_folios,
                         validar_indice_area, validar_estado, generar_codigo_expediente)
-from persistencia import guardar_en_archivo, registrar_auditoria
+from persistencia import guardar_padron, insertar_en_bd, actualizar_estado_en_bd, registrar_auditoria
+from datos import ARREGLOS
 
 
 def insertar_expediente(
@@ -27,7 +28,8 @@ def insertar_expediente(
 ) -> Tuple[bool, str]:
     """
     Valida las entradas, genera el código único, inserta en los arreglos paralelos
-    y sincroniza inmediatamente con el archivo CSV.
+    y lo guarda de inmediato en SQLite con un INSERT parametrizado. Si la base lo
+    rechaza (restricciones CHECK), se deshace la inserción en los arreglos.
     indice_area es el índice interno 0-5 (el menú convierte la opción 1-6 con validar_opcion_area).
     Todas las reglas se consultan en validacion.py, para no repetirlas aquí (principio DRY).
     """
@@ -63,7 +65,11 @@ def insertar_expediente(
     fechas.append(marca_fecha)
     estados.append("REGISTRADO")
 
-    guardar_en_archivo()
+    ok_bd, msg_bd = insertar_en_bd(len(codigos) - 1)
+    if not ok_bd:
+        for lista in ARREGLOS:      # la memoria y la base siempre coinciden
+            lista.pop()
+        return False, msg_bd
     registrar_auditoria("REGISTRO", f"Nuevo expediente {nuevo_codigo} - DNI/RUC: {res_dni}")
     return True, nuevo_codigo
 
@@ -103,7 +109,7 @@ def ordenar_expedientes_por_codigo(ascendente: bool = True, guardar: bool = True
         if not hubo_intercambio:
             break
     if guardar:
-        guardar_en_archivo()
+        guardar_padron()
 
 
 def ordenar_expedientes_por_ciudadano() -> None:
@@ -122,7 +128,7 @@ def ordenar_expedientes_por_ciudadano() -> None:
                 hubo_intercambio = True
         if not hubo_intercambio:
             break
-    guardar_en_archivo()
+    guardar_padron()
 
 
 def busqueda_binaria_iterativa(lista: List[str], objetivo: str,
@@ -180,14 +186,14 @@ def ordenar_expedientes_por_codigo_seleccion(guardar: bool = True,
             if contador is not None:
                 contador["intercambios"] += 1
     if guardar:
-        guardar_en_archivo()
+        guardar_padron()
 
 
 def actualizar_estado_expediente(codigo_buscado: str, estado_nuevo: str) -> Tuple[bool, str]:
     """
     Cambia el estado de un expediente (REGISTRADO -> EN EVALUACIÓN -> OBSERVADO / ATENDIDO).
     Pasos: valida el estado, ubica el expediente con la búsqueda binaria, aplica las reglas
-    y guarda el CSV y la bitácora. Reglas: un expediente ATENDIDO ya no se modifica y no se
+    y guarda el cambio en SQLite (UPDATE parametrizado) y en la bitácora. Reglas: un expediente ATENDIDO ya no se modifica y no se
     acepta "cambiar" al mismo estado que ya tiene.
     """
     ok_est, estado_oficial = validar_estado(estado_nuevo)
@@ -202,7 +208,10 @@ def actualizar_estado_expediente(codigo_buscado: str, estado_nuevo: str) -> Tupl
     if estado_anterior == estado_oficial:
         return False, f"Error: {codigos[pos]} ya se encuentra en estado {estado_oficial}."
     estados[pos] = estado_oficial
-    guardar_en_archivo()
+    ok_bd, msg_bd = actualizar_estado_en_bd(codigos[pos], estado_oficial)
+    if not ok_bd:
+        estados[pos] = estado_anterior
+        return False, msg_bd
     registrar_auditoria("ESTADO", f"{codigos[pos]}: {estado_anterior} -> {estado_oficial}")
     return True, f"{codigos[pos]}: {estado_anterior} -> {estado_oficial}"
 

@@ -2,8 +2,11 @@
 __pycache__/
 *.pyc
 
-# Resultado de la simulación de pruebas (se genera con: python main.py --auto)
+# Bases SQLite: se crean solas al ejecutar (la real se migra desde expedientes_cajamarca.csv)
+*.db
+# Resultado de la simulación (python main.py --auto) y exportación para Excel (opción 10)
 expedientes_prueba.csv
+expedientes_exportados.csv
 
 # Configuración local del editor
 .vscode/

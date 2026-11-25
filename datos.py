@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 MÓDULO 1: CONFIGURACIÓN Y ARREGLOS PARALELOS (ESTRUCTURAS LINEALES DE DATOS)
+Los arreglos son la estructura de trabajo en memoria; SQLite es donde se guardan.
 Prototipo de Mesa de Partes Digital - Municipalidad Distrital de Los Baños del Inca (Cajamarca)
 Los ocho arreglos se comparten entre módulos: se modifican con sus métodos
 (append, clear, intercambio por índice) y nunca se reasignan.
@@ -9,9 +10,11 @@ Los ocho arreglos se comparten entre módulos: se modifican con sus métodos
 
 from typing import List
 
-ARCHIVO_DATOS = "expedientes_cajamarca.csv"
+ARCHIVO_DATOS = "mesa_partes.db"                    # Base de datos SQLite (persistencia principal)
+ARCHIVO_CSV_ORIGEN = "expedientes_cajamarca.csv"    # Padrón inicial: se migra a SQLite la primera vez
+ARCHIVO_EXPORTACION = "expedientes_exportados.csv"  # Copia para abrir en Excel (opción 10 del menú)
 ARCHIVO_AUDITORIA = "auditoria_mesa_partes.log"
-ARCHIVO_PRUEBAS = "expedientes_prueba.csv"   # Resultado de la simulación de pruebas
+ARCHIVO_PRUEBAS = "mesa_partes_prueba.db"           # Base aparte donde corre la simulación de pruebas
 
 AREAS_MUNICIPALES = [
     "Subgerencia de Desarrollo Urbano y Rural",

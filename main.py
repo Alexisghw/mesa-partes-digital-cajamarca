@@ -10,12 +10,12 @@ Descripción técnica:
 Este sistema implementa el registro interactivo por teclado, validación con lógica proposicional,
 búsqueda binaria O(log2 n) iterativa y recursiva, ordenamiento Burbuja Mejorado y Selección
 sobre 8 arreglos paralelos, actualización de estado
-y persistencia permanente en archivos estructurados CSV (UTF-8).
+y persistencia en una base de datos SQLite con consultas parametrizadas.
 
 Organización en módulos:
     datos.py         -> Módulo 1: configuración y arreglos paralelos
     validacion.py    -> Módulo 2: validación y cadenas de caracteres
-    persistencia.py  -> Módulo 3: archivos CSV y bitácora de auditoría
+    persistencia.py  -> Módulo 3: base SQLite, migración, exportación CSV y bitácora
     algoritmos.py    -> Módulo 4: inserción, ordenamiento y búsqueda
     pruebas.py       -> Módulo 5: simulación de pruebas con datos de campo
     interfaz.py      -> Módulo 6: menú interactivo por teclado

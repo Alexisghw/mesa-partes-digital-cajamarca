@@ -5,13 +5,17 @@ PRUEBAS AUTOMÁTICAS (matriz de casos de prueba CP-xx, sesión 6.3)
 Cada prueba usa los valores normales, el límite, el adyacente al límite y entradas inválidas.
 Ejecutar desde la carpeta del proyecto:
     python -m unittest discover -s tests -v
-Cada prueba trabaja en una carpeta temporal: nunca toca expedientes_cajamarca.csv real.
+Cada prueba trabaja en una carpeta temporal: nunca toca la base mesa_partes.db real.
 """
 
+import io
+import contextlib
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -20,7 +24,8 @@ from datos import ARREGLOS, codigos, ciudadanos, estados, folios  # noqa: E402
 from validacion import (validar_dni_o_ruc, validar_nombre_ciudadano, validar_asunto,  # noqa: E402
                         validar_folios, validar_opcion_area, validar_estado,
                         generar_codigo_expediente, clave_orden_alfabetico)
-from persistencia import guardar_en_archivo, cargar_desde_archivo      # noqa: E402
+from persistencia import (cargar_padron, migrar_csv_a_sqlite, exportar_csv, conectar,  # noqa: E402
+                          base_activa)
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_codigo,  # noqa: E402
                         ordenar_expedientes_por_codigo_seleccion, ordenar_expedientes_por_ciudadano,
                         buscar_por_codigo_binaria, busqueda_binaria_iterativa,
@@ -138,7 +143,7 @@ class TestRecursividadSobreArreglos(unittest.TestCase):
 
 
 class TestOperacionesSobreElPadron(BaseConCarpetaTemporal):
-    """CP-13 a CP-19: registro, ordenamientos, estados, persistencia y regresión de la simulación."""
+    """CP-13 a CP-20: registro, ordenamientos, estados, persistencia en SQLite, migración y regresión."""
 
     def test_cp13_registro_y_rechazo(self):
         self.registrar_campo()
@@ -171,15 +176,15 @@ class TestOperacionesSobreElPadron(BaseConCarpetaTemporal):
     def test_cp16_simulacion_no_altera_el_padron(self):
         # Regresión del defecto del EP: la simulación borraba y duplicaba el padrón real.
         self.registrar_campo()
-        with open(datos.ARCHIVO_DATOS, encoding="utf-8") as archivo:
+        with open(datos.ARCHIVO_DATOS, "rb") as archivo:
             antes = archivo.read()
-        import io, contextlib
         with contextlib.redirect_stdout(io.StringIO()):
             ejecutar_simulacion_cajamarca()
-        with open(datos.ARCHIVO_DATOS, encoding="utf-8") as archivo:
-            self.assertEqual(archivo.read(), antes)
+        with open(datos.ARCHIVO_DATOS, "rb") as archivo:
+            self.assertEqual(archivo.read(), antes)          # la base real queda idéntica byte a byte
         self.assertEqual(len(codigos), 3)
         self.assertTrue(os.path.exists(datos.ARCHIVO_PRUEBAS))
+        self.assertEqual(base_activa(), datos.ARCHIVO_DATOS)
 
     def test_cp17_actualizar_estado(self):
         self.registrar_campo()
@@ -196,21 +201,73 @@ class TestOperacionesSobreElPadron(BaseConCarpetaTemporal):
         actualizar_estado_expediente("EXP-2026-0003", "OBSERVADO")
         for lista in ARREGLOS:
             lista.clear()
-        self.assertEqual(cargar_desde_archivo(), 3)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cargar_padron(), 3)
         self.assertEqual(estados[codigos.index("EXP-2026-0003")], "OBSERVADO")
         self.assertEqual(ciudadanos[0], "CHILÓN CHUQUIMANGO, JORGE LUIS")   # UTF-8 conserva tildes
 
-    def test_cp19_linea_danada_se_ignora(self):
-        self.registrar_campo()
-        with open(datos.ARCHIVO_DATOS, "a", encoding="utf-8") as archivo:
-            archivo.write("EXP-2026-0004;DATO;INCOMPLETO\n")
-        import io, contextlib
+    def test_cp19_migracion_csv_descarta_filas_invalidas(self):
+        with open(datos.ARCHIVO_CSV_ORIGEN, "w", encoding="utf-8") as f:
+            f.write("CODIGO;DNI_RUC;CIUDADANO;ASUNTO;AREA_DESTINO;FOLIOS;FECHA_HORA;ESTADO\n"
+                    "EXP-2026-0001;71458923;CHILON, JORGE;LICENCIA DE OBRA;Gerencia Municipal;18;2026-10-14 08:35:10;REGISTRADO\n"
+                    "EXP-2026-0002;DATO;INCOMPLETO\n"
+                    "EXP-2026-0003;7145AB23;PEREZ, ANA;LICENCIA DE OBRA;Gerencia Municipal;5;2026-10-14;REGISTRADO\n"
+                    "EXP-2026-0001;42891034;REPETIDO, CODIGO;RECLAMO ARBITRIOS;Gerencia Municipal;6;2026-10-14;REGISTRADO\n")
+        self.assertEqual(migrar_csv_a_sqlite(), (1, 3))
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(cargar_desde_archivo(), 3)
+            self.assertEqual(cargar_padron(), 1)
 
     def test_cp20_estado_valido_acepta_minusculas(self):
         self.assertEqual(validar_estado("en evaluación"), (True, "EN EVALUACIÓN"))
         self.assertFalse(validar_estado("pendiente")[0])
+
+
+class TestSeguridadSQLite(BaseConCarpetaTemporal):
+    """CP-21 a CP-24: inyección SQL, restricciones de la base e inyección CSV."""
+
+    def contar(self):
+        with closing(conectar()) as con:
+            return con.execute("SELECT COUNT(*) FROM expedientes").fetchone()[0]
+
+    def test_cp21_inyeccion_sql_en_el_nombre(self):
+        self.registrar_campo()
+        ataque = "Robert'); DROP TABLE expedientes; --"
+        ok, codigo = insertar_expediente("74892011", ataque, "Prueba de inyeccion SQL", 0, 1)
+        self.assertTrue(ok)
+        self.assertEqual(self.contar(), 4)                 # la tabla sigue existiendo
+        with closing(conectar()) as con:
+            guardado = con.execute("SELECT ciudadano FROM expedientes WHERE codigo = ?", (codigo,)).fetchone()[0]
+        self.assertEqual(guardado, ataque.upper())         # se guardó como texto común
+
+    def test_cp22_inyeccion_sql_en_codigo_y_estado(self):
+        self.registrar_campo()
+        for ataque in ["' OR '1'='1", "EXP-2026-0001' OR 1=1 --", "x'; DELETE FROM expedientes; --"]:
+            self.assertEqual(buscar_por_codigo_binaria(ataque), -1)
+            self.assertFalse(actualizar_estado_expediente(ataque, "ATENDIDO")[0])
+        with closing(conectar()) as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM expedientes WHERE estado = 'ATENDIDO'").fetchone()[0], 0)
+        self.assertEqual(self.contar(), 3)
+
+    def test_cp23_restricciones_check_de_la_base(self):
+        self.registrar_campo()
+        for sql in ["UPDATE expedientes SET folios = 999", "UPDATE expedientes SET estado = 'BORRADO'",
+                    "UPDATE expedientes SET dni_ruc = '12AB5678'", "UPDATE expedientes SET area = 'Otra'"]:
+            with self.assertRaises(sqlite3.IntegrityError):
+                with closing(conectar()) as con, con:
+                    con.execute(sql)
+        ok, _ = insertar_expediente("71458923", "N" * 300, "Asunto de prueba largo", 0, 1)
+        self.assertFalse(ok)                                # 300 caracteres: la base lo rechaza
+        self.assertEqual((len(codigos), self.contar()), (3, 3))  # memoria y base siguen iguales
+
+    def test_cp24_exportacion_neutraliza_formulas(self):
+        insertar_expediente("71458923", '=HYPERLINK("http://malo.com","clic")', "Asunto de prueba largo", 0, 1)
+        insertar_expediente("71458923", "@SUMA(A1:A9) prueba", "+Asunto con signo", 0, 1)
+        self.assertTrue(exportar_csv())
+        with open(datos.ARCHIVO_EXPORTACION, encoding="utf-8-sig") as f:
+            contenido = f.read()
+        self.assertIn("'=HYPERLINK", contenido)
+        self.assertIn("'@SUMA", contenido)
+        self.assertIn("'+ASUNTO", contenido)
 
 
 if __name__ == "__main__":

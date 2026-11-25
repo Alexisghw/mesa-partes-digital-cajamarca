@@ -5,10 +5,12 @@ MÓDULO 5: SIMULACIÓN DE PRUEBAS AUTOMÁTICAS CON DATOS DE CAMPO (CAJAMARCA)
 """
 
 import os
+import sqlite3
+from contextlib import closing
 
 from datos import ARCHIVO_DATOS, ARCHIVO_PRUEBAS, ARREGLOS, codigos, ciudadanos, areas, fechas
 from validacion import normalizar_texto
-from persistencia import cargar_desde_archivo
+from persistencia import cargar_padron, usar_base, conectar
 from algoritmos import (insertar_expediente, ordenar_expedientes_por_ciudadano,
                         buscar_por_codigo_binaria, mostrar_tabla_expedientes,
                         actualizar_estado_expediente)
@@ -17,38 +19,30 @@ from algoritmos import (insertar_expediente, ordenar_expedientes_por_ciudadano,
 def ejecutar_simulacion_cajamarca() -> None:
     """
     Carga los datos recogidos en la práctica de campo en la Municipalidad Distrital
-    de Los Baños del Inca (Cajamarca) y ejecuta las pruebas de validación,
-    ordenamiento, búsqueda y persistencia.
-    Las pruebas se ejecutan sobre un padrón vacío; al terminar se restaura el padrón
-    real (arreglos y archivo) y el resultado de las pruebas queda en ARCHIVO_PRUEBAS.
+    de Los Baños del Inca (Cajamarca) y ejecuta las pruebas de validación, ordenamiento,
+    búsqueda, persistencia, estados y seguridad.
+    Las pruebas corren en una base SQLite aparte (ARCHIVO_PRUEBAS): la base real nunca se
+    abre. Al terminar se restauran los arreglos del padrón real.
     """
-    # Respaldo del padrón real: así las pruebas no borran ni duplican expedientes
     respaldo_arreglos = [lista.copy() for lista in ARREGLOS]
-    respaldo_archivo = None
-    if os.path.exists(ARCHIVO_DATOS):
-        with open(ARCHIVO_DATOS, mode="r", encoding="utf-8", newline="") as archivo:
-            respaldo_archivo = archivo.read()
     for lista in ARREGLOS:
         lista.clear()
-
+    if os.path.exists(ARCHIVO_PRUEBAS):
+        os.remove(ARCHIVO_PRUEBAS)          # cada simulación empieza con una base de prueba vacía
+    base_real = usar_base(ARCHIVO_PRUEBAS)
     try:
         _ejecutar_fases_de_prueba()
     finally:
-        # Se conserva el resultado de las pruebas como evidencia y se restaura el padrón real
-        if os.path.exists(ARCHIVO_DATOS):
-            os.replace(ARCHIVO_DATOS, ARCHIVO_PRUEBAS)
-        if respaldo_archivo is not None:
-            with open(ARCHIVO_DATOS, mode="w", encoding="utf-8", newline="") as archivo:
-                archivo.write(respaldo_archivo)
+        usar_base(base_real)
         for lista, copia in zip(ARREGLOS, respaldo_arreglos):
             lista.clear()
             lista.extend(copia)
         print(f"\n[FIN DE PRUEBAS] Resultado guardado en '{ARCHIVO_PRUEBAS}'. "
-              f"El padrón real de '{ARCHIVO_DATOS}' quedó sin cambios.")
+              f"La base real '{ARCHIVO_DATOS}' quedó sin cambios.")
 
 
 def _ejecutar_fases_de_prueba() -> None:
-    """Fases 1 a 6 de la simulación (registro, validación, ordenamiento, búsqueda, persistencia y estados)."""
+    """Fases 1 a 7: registro, validación, ordenamiento, búsqueda, persistencia, estados y seguridad."""
     print("=" * 116)
     print("   SISTEMA DE MESA DE PARTES DIGITAL - MUNICIPALIDAD DISTRITAL DE LOS BAÑOS DEL INCA (CAJAMARCA)")
     print("   Contribuye al cumplimiento de la Ley N.° 31170 y Decreto Legislativo N.° 1412 - Prototipo v1.0")
@@ -92,9 +86,9 @@ def _ejecutar_fases_de_prueba() -> None:
         else:
             print(f"  [NO ENCONTRADO] El código '{cod_consulta}' no existe en el padrón de expedientes.")
 
-    print("\n[FASE 5] VERIFICACIÓN DE PERSISTENCIA EN ARCHIVO ('expedientes_cajamarca.csv'):")
-    total_reconstruidos = cargar_desde_archivo()
-    print(f"  -> Archivo CSV leído correctamente. Registros recuperados del disco: {total_reconstruidos}")
+    print("\n[FASE 5] VERIFICACIÓN DE PERSISTENCIA EN SQLITE:")
+    total_reconstruidos = cargar_padron()
+    print(f"  -> Base de datos leída correctamente. Registros recuperados del disco: {total_reconstruidos}")
 
     print("\n[FASE 6] SEGUIMIENTO: ACTUALIZACIÓN DE ESTADO DE EXPEDIENTES:")
     cambios = [("EXP-2026-0002", "EN EVALUACIÓN"), ("EXP-2026-0002", "atendido"),
@@ -103,3 +97,25 @@ def _ejecutar_fases_de_prueba() -> None:
     for cod, estado in cambios:
         exito, msg = actualizar_estado_expediente(cod, estado)
         print(f"  -> {cod} a '{estado}': {'[ACEPTADO] ' if exito else '[RECHAZADO] '}{msg}")
+
+    print("\n[FASE 7] SEGURIDAD: INTENTOS DE INYECCIÓN SQL (CONSULTAS PARAMETRIZADAS):")
+    with closing(conectar()) as con:
+        antes = con.execute("SELECT COUNT(*) FROM expedientes").fetchone()[0]
+    ataque = "Robert'); DROP TABLE expedientes; --"
+    exito, msg = insertar_expediente("74892011", ataque, "Prueba de inyeccion SQL en el nombre", 5, 1)
+    print(f"  -> Nombre malicioso: {'[GUARDADO COMO TEXTO] ' + msg if exito else '[RECHAZADO] ' + msg}")
+    for cod in ["' OR '1'='1", "EXP-2026-0001' OR 1=1 --"]:
+        print(f"  -> Búsqueda con código malicioso {cod!r}: posición {buscar_por_codigo_binaria(cod)} (no existe)")
+        exito, msg = actualizar_estado_expediente(cod, "ATENDIDO")
+        print(f"  -> Cambio de estado con ese código: {'[ACEPTADO] ' if exito else '[RECHAZADO] '}{msg}")
+    with closing(conectar()) as con:
+        despues = con.execute("SELECT COUNT(*) FROM expedientes").fetchone()[0]
+        atendidos = con.execute("SELECT COUNT(*) FROM expedientes WHERE estado = 'ATENDIDO'").fetchone()[0]
+    print(f"  -> La tabla sigue existiendo: {antes} expedientes antes y {despues} después; "
+          f"ATENDIDOS: {atendidos} (solo el cambio legítimo de la fase 6).")
+    try:
+        with closing(conectar()) as con, con:
+            con.execute("UPDATE expedientes SET folios = 999 WHERE codigo = 'EXP-2026-0001'")
+        print("  -> [FALLA] La base aceptó 999 folios.")
+    except sqlite3.IntegrityError as error:
+        print(f"  -> Escritura directa con 999 folios: [RECHAZADA POR LA BASE] {error}")
