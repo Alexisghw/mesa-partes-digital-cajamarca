@@ -5,7 +5,7 @@ MÓDULO 4: OPERACIONES ALGORÍTMICAS (INSERCIÓN, ORDENAMIENTO Y BÚSQUEDA)
 """
 
 from datetime import datetime
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from datos import (AREAS_MUNICIPALES,
                    codigos, dnis, ciudadanos, asuntos, areas, folios, fechas, estados)
@@ -118,28 +118,37 @@ def ordenar_expedientes_por_ciudadano() -> None:
     guardar_en_archivo()
 
 
+def busqueda_binaria_iterativa(lista: List[str], objetivo: str,
+                               contador: Optional[List[int]] = None) -> int:
+    """
+    Búsqueda Binaria iterativa O(log2 n) sobre una lista ordenada ascendentemente.
+    Retorna la posición del objetivo o -1. 'contador' (opcional) acumula cuántas
+    posiciones se revisaron; lo usa la comparación con la versión recursiva (Módulo 7).
+    """
+    izquierda, derecha = 0, len(lista) - 1
+    while izquierda <= derecha:
+        medio = (izquierda + derecha) // 2
+        if contador is not None:
+            contador[0] += 1
+        if lista[medio] == objetivo:
+            return medio
+        if lista[medio] < objetivo:
+            izquierda = medio + 1
+        else:
+            derecha = medio - 1
+    return -1
+
+
 def buscar_por_codigo_binaria(codigo_buscado: str) -> int:
     """
-    Implementa el algoritmo de Búsqueda Binaria O(log2 n) sobre el arreglo de códigos.
+    Busca un expediente por código con la Búsqueda Binaria iterativa O(log2 n).
     Precondición: Se asegura que los arreglos estén ordenados ascendentemente por código
     (si ya lo están, la burbuja mejorada hace una sola pasada O(n)); se ordena solo en
     memoria para no reescribir el archivo en cada consulta.
     Retorna el índice del expediente o -1 si no existe.
     """
     ordenar_expedientes_por_codigo(ascendente=True, guardar=False)
-    objetivo = normalizar_texto(codigo_buscado)
-    izquierda = 0
-    derecha = len(codigos) - 1
-
-    while izquierda <= derecha:
-        medio = (izquierda + derecha) // 2
-        if codigos[medio] == objetivo:
-            return medio
-        elif codigos[medio] < objetivo:
-            izquierda = medio + 1
-        else:
-            derecha = medio - 1
-    return -1
+    return busqueda_binaria_iterativa(codigos, normalizar_texto(codigo_buscado))
 
 
 def buscar_por_dni_secuencial(dni_buscado: str) -> List[int]:
